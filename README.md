@@ -5,4 +5,4 @@ Bu depo, yapay zeka (AI) destekli ajanların (Cursor, Claude Code, Antigravity v
 ## 📖 Şablon Dokümanı
 Ajanların nasıl bir dizin yapısıyla (`.context/`) ve hangi hafıza kurallarıyla çalışması gerektiğini anlatan ana dokümana aşağıdan ulaşabilirsiniz:
 
-👉 **[Platform Agnostic Agentic Project Structure (v1.2) Okumak İçin Tıklayın](./platform-agnostic-agentic-project-structure.md)**
+👉 **[Platform Agnostic Agentic Project Structure (v1.3) Okumak İçin Tıklayın](./platform-agnostic-agentic-project-structure.md)**

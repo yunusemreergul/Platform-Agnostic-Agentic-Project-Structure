@@ -1,6 +1,6 @@
 # Platform Agnostic Agentic Project Structure
 
-*v1.2*
+*v1.3*
 
 > Herhangi bir AI destekli geliştirme platformunda çalışabilen,
 > taşınabilir ve modüler agentic proje yapısı şablonu.
@@ -8,6 +8,8 @@
 ---
 
 ## 1. Nedir ve Ne Amaçla Kullanılır
+
+AI agent'ları her oturumda sıfırdan başlar — önceki kararları, yarım kalan işleri hatırlamaz. Üstelik her platform farklı bir yapı bekler; bir araçta kurulan düzen başkasında çalışmaz.
 
 Bu şablon, AI agent'larının bir proje üzerinde etkili biçimde çalışabilmesi için gereken bağlam, hafıza, kural ve görev yapısını standart bir dizin düzeniyle tanımlar.
 
@@ -36,6 +38,10 @@ LLM'lerin context window'u oturum bitince sıfırlanır. Kalıcı hafıza dosya 
 
 `AGENTS.md` ile `.context/` altındaki tüm dosyalar — `rules/`, `agents/`, `memory/`, `tasks/` ve `skills/` — agent'ın bağlamını ve kısıtlarını tanımlar ancak otomatik aksiyon başlatmaz. Agent'ı harekete geçirmek için kullanıcı prompt vermek zorundadır. Bu dosyalar ne kadar iyi yazılırsa kullanıcının o kadar kısa ve net prompt vermesi yeterli olur. Örneğin agent tanım dosyası, kural dosyaları ve hafıza dosyaları doğru kurgulanmışsa "sıradaki görevi al" gibi çok kısa bir prompt yeterli olur — agent neyi, nerede, nasıl yapacağını zaten bağlamdan bilir.
 
+### Skills pasif bağlamdır
+
+Skill dosyaları agent'ın belirli bir alanda nasıl davranacağını tanımlar. Agent ilgili görevi alırken skill dosyasını okur ve o alandaki yaklaşım, adımlar ve kısıtlamaları bağlamına dahil eder. Hangi skill'lerin kullanılacağı agent tanım dosyasında (`agents/[agent_name].md`) belirtilir.
+
 ### Zorunlu ve opsiyonel katmanlar
 
 Tüm yapı iki katmandan oluşur:
@@ -44,6 +50,10 @@ Tüm yapı iki katmandan oluşur:
 - **Opsiyonel modüller** — `rules/`, `agents/`, `memory/sessions/`, `tasks/`, `skills/`
 
 Opsiyonel modüller ihtiyaca göre eklenir veya çıkarılır.
+
+> **Tek agent kullanıyorsanız:** `agents/`, `memory/sessions/` ve `skills/` opsiyoneldir. Handoff tablosu ve lock mekanizması kullanılmaz.
+>
+> **Multi-agent kullanıyorsanız:** Tüm modüller devreye girer, her agent için ayrı tanım ve oturum dosyası oluşturulur.
 
 ---
 
@@ -82,7 +92,7 @@ project-root/
 
 ### Dizin ve Dosya Açıklamaları
 
-**`AGENTS.md`** — Zorunlu giriş kapısıdır. Projeyi, agent'ları ve `.context/` yapısını tanıtır. Her platform ilk olarak bu dosyayı arar.
+**`AGENTS.md`** — Zorunlu giriş kapısıdır. Projeyi, agent'ları ve `.context/` yapısını tanıtır. Her platform ilk olarak kendi giriş kapısı dosyasını arar; `AGENTS.md` o dosya tarafından `"Tüm kurallar ve proje bağlamı için AGENTS.md dosyasını oku."` gibi bir yönlendirme ile işaret edilmelidir.
 
 **`.context/`** — Tüm agentic bağlam bu dizin altında toplanır. Platform bağımsız, taşınabilir birimdir.
 
@@ -163,7 +173,9 @@ project-root/
 
 ### AGENTS.md
 
-Projenin giriş kapısıdır. Kısa ve yönlendirici olmalıdır. Ayrıntılar `.context/` içindeki ilgili dosyalara bırakılır.
+Projenin giriş kapısıdır. Kısa ve yönlendirici olmalıdır. Ayrıntılar `.context/` içindeki ilgili dosyalara bırakılır. Platform bu dosyayı her oturumda otomatik okur; ancak dosyaları okumak agent'ı harekete geçirmez — aksiyon almak için kullanıcı prompt vermek zorundadır.
+
+> **Not:** Lock mekanizması ve görev akışı kuralları `AGENTS.md` içinde tanımlanır çünkü her agent oturum başında bu dosyayı okur. Böylece bu kurallar tüm agent'lara otomatik olarak iletilmiş olur.
 
 > **Tek agent kullananlar için not:** `Agent'lar` tablosu opsiyoneldir. Projede yalnızca bir agent varsa bu bölümü atlayabilir, `Oturum Başlangıcı`'nı da buna göre sadeleştirebilirsin.
 
@@ -211,7 +223,7 @@ Her oturumda sırasıyla şunları oku:
 4. `.context/memory/sessions/[kendi_agent_adın]_session.md` *(tek agent: opsiyonel)*
 ```
 
-**Örnek — Task Manager projesi:**
+**Örnek — AGENTS.md:**
 
 ```markdown
 # Task Manager
@@ -872,6 +884,8 @@ backend, frontend
 - **Notlar:** Monorepo yapısı benimsendi, src/backend ve src/frontend altında ayrı projeler
 ```
 
+> Örnek şemadaki tüm task dosyaları aynı template yapısını izler. Burada `active/`, `backlog/` ve `completed/` dizinlerinden birer temsili örnek gösterilmiştir.
+
 ---
 
 ### .context/skills/[skill_name]/skill.md
@@ -1036,14 +1050,15 @@ Kısaca:
 ```
 tasks/backlog/ → tasks/active/ → tasks/completed/
 ```
-Her geçişte dosya taşıma + `progress.md` güncellemesi birlikte yapılır. Ayrıntı için `AGENTS.md`'ye bakınız.
+Her geçişte dosya taşıma + `progress.md` güncellemesi birlikte yapılır. Ayrıntı için Bölüm 4'teki AGENTS.md şablonuna bakınız.
 
 ### Agent'a verilecek ilk prompt
 
 ```
-.context/agents/[agent_name].md dosyasını oku,
-ardından progress.md'deki sıradaki görevi al ve
+[agent_name] agent olarak progress.md'deki sıradaki görevi al ve
 ne yapacağını önce bana söyle, onaylarsam başla.
 ```
+
+> Tek agent kullanıyorsanız `[agent_name] agent olarak` kısmını atlayabilirsiniz.
 
 ---
