@@ -1,6 +1,6 @@
 # Platform Agnostic Agentic Project Structure
 
-*v1.1*
+*v1.2*
 
 > Herhangi bir AI destekli geliştirme platformunda çalışabilen,
 > taşınabilir ve modüler agentic proje yapısı şablonu.
@@ -60,6 +60,7 @@ project-root/
     ├── agents/
     │   └── [agent_name].md
     ├── memory/
+    │   ├── .lock (geçici)
     │   ├── project-state.md
     │   ├── progress.md
     │   ├── decisions.md
@@ -75,6 +76,8 @@ project-root/
     └── skills/
         └── [skill_name]/
             └── skill.md
+
+> Skill dizinleri projeye göre değişir. Her agent kendi tanım dosyasında (`agents/[agent_name].md`) hangi skill'leri kullandığını belirtir.
 ```
 
 ### Dizin ve Dosya Açıklamaları
@@ -91,7 +94,7 @@ project-root/
 
 **`agents/[agent_name].md`** — Bir agent'a ait kimlik ve kapsam belgesi.
 
-**`memory/`** — Proje geneli kalıcı hafıza. Oturumlar arasında bağlamın korunduğu yerdir.
+**`memory/`** — Proje geneli kalıcı hafıza. Oturumlar arasında bağlamın korunduğu yerdir. Multi-agent ortamlarda çakışmaları önlemek adına geçici `.lock` dosyaları bu dizinde yaratılıp silinebilir.
 
 **`memory/project-state.md`** — Projenin anlık genel durumu. Tüm agent'lar okur ve günceller. Zorunlu çekirdek dosyadır.
 
@@ -138,17 +141,19 @@ project-root/
     │       └── frontend_session.md
     ├── tasks/
     │   ├── active/
-    │   │   ├── user-auth.md
-    │   │   └── product-listing.md
+    │   │   ├── task-crud-api.md
+    │   │   └── auth-pages.md
     │   ├── backlog/
-    │   │   ├── payment-integration.md
-    │   │   └── email-notifications.md
+    │   │   ├── project-management-api.md
+    │   │   └── task-list-page.md
     │   └── completed/
     │       └── project-setup.md
     └── skills/
         ├── api-design/
         │   └── skill.md
-        └── database/
+        ├── database/
+        │   └── skill.md
+        └── ui-components/
             └── skill.md
 ```
 
@@ -191,6 +196,12 @@ Görev dosyaları, durumlarına göre üç farklı dizinde yaşar. Bir görevin 
 1. **Backlog (Planlama):** Yeni görevler `tasks/backlog/` dizininde oluşturulur.
 2. **Active (Geliştirme):** Agent görevi devraldığında dosyayı `tasks/active/` dizinine taşır ve `progress.md`'yi "Devam Eden" olarak günceller.
 3. **Completed (Kapanış):** Görev bittiğinde dosya `tasks/completed/` dizinine taşınır, `progress.md` "Tamamlanan" olarak güncellenir ve görev `project-state.md`'deki "Aktif Çalışmalar" listesinden silinir.
+
+## Hafıza Yönetimi ve Çakışmalar (Conflict Management)
+Çoklu ajan (multi-agent) veya otomatik/asenkron kullanım senaryolarında, hafıza dosyalarına yazarken dosyaların ezilmesini (race condition) önlemek için **Lock (Kilit)** mekanizması uygulanır:
+1. Bir ajan hafıza dosyalarını (`progress.md`, `project-state.md` vb.) güncelleyeceği zaman önce `.context/memory/.lock` adlı bir dosya yaratır. İçine kendi adını ve o anın tam saatini yazar. İşini bitirince (dosyaları kaydedince) `.lock` dosyasını siler.
+2. Diğer bir ajan dosyaları okumak/yazmak istediğinde `.lock` dosyası varsa, silinmesini (diğer ajanın işinin bitmesini) bekler.
+3. **(Kilit Çözücü):** Eğer `.lock` dosyasının içindeki saat 5 dakikadan daha eskiyse, ajan o dosyanın çökmüş bir ajandan kaldığını, geçersiz (stale) olduğunu anlar ve `.lock` dosyasını ezerek/silerek işlemine devam eder.
 
 ## Oturum Başlangıcı
 Her oturumda sırasıyla şunları oku:
@@ -235,6 +246,12 @@ Görev dosyaları, durumlarına göre üç farklı dizinde yaşar. Bir görevin 
 1. **Backlog (Planlama):** Yeni görevler `tasks/backlog/` dizininde oluşturulur.
 2. **Active (Geliştirme):** Agent görevi devraldığında dosyayı `tasks/active/` dizinine taşır ve `progress.md`'yi "Devam Eden" olarak günceller.
 3. **Completed (Kapanış):** Görev bittiğinde dosya `tasks/completed/` dizinine taşınır, `progress.md` "Tamamlanan" olarak güncellenir ve görev `project-state.md`'deki "Aktif Çalışmalar" listesinden silinir.
+
+## Hafıza Yönetimi ve Çakışmalar (Conflict Management)
+Çoklu ajan (multi-agent) veya otomatik/asenkron kullanım senaryolarında, hafıza dosyalarına yazarken dosyaların ezilmesini (race condition) önlemek için **Lock (Kilit)** mekanizması uygulanır:
+1. Bir ajan hafıza dosyalarını (`progress.md`, `project-state.md` vb.) güncelleyeceği zaman önce `.context/memory/.lock` adlı bir dosya yaratır. İçine kendi adını ve o anın tam saatini düz metin olarak yazar (Örn: `backend | 2025-01-20T10:30:00Z`). İşini bitirince (dosyaları kaydedince) `.lock` dosyasını siler.
+2. Diğer bir ajan dosyaları okumak/yazmak istediğinde `.lock` dosyası varsa, silinmesini (diğer ajanın işinin bitmesini) bekler.
+3. **(Kilit Çözücü):** Eğer `.lock` dosyasının içindeki saat 5 dakikadan daha eskiyse, ajan o dosyanın çökmüş bir ajandan kaldığını, geçersiz (stale) olduğunu anlar ve `.lock` dosyasını ezerek/silerek işlemine devam eder.
 
 ## Oturum Başlangıcı
 Her oturumda sırasıyla şunları oku:
@@ -506,6 +523,7 @@ Projenin anlık genel durumunu, aktif çalışmaları, bilinen kısıtları ve a
 |---|---|---|
 | [agent_name] | `[dizin/]` | Devam ediyor |
 
+<!-- Tek agent kullanıyorsan bu tabloyu silebilirsin -->
 ## Bekleyen Handoff'lar (İş Devirleri)
 | Kime (Hedef) | Kimden (Kaynak) | Konu / Mesaj | İlgili Dosya veya Task |
 |---|---|---|---|
@@ -622,7 +640,7 @@ Mimari kararların ve gerekçelerinin saklandığı dosyadır. Neden bu kararın
 - **Tarih:** YYYY-MM-DD HH:MM
 - **Değişiklik:** [Ne yapıldı, bir cümle]
 
-### YYYY-MM-DD — [Başlık]
+## YYYY-MM-DD — [Başlık]
 **Karar:** [Ne yapılacak]
 **Gerekçe:** [Neden]
 **Alternatifler:** [Değerlendirilen ama seçilmeyen seçenekler]
@@ -639,19 +657,19 @@ Mimari kararların ve gerekçelerinin saklandığı dosyadır. Neden bu kararın
 - **Tarih:** 2025-01-20 10:30
 - **Değişiklik:** JWT yapılandırma kararı eklendi
 
-### 2025-01-16 — Veritabanı Şeması
+## 2025-01-16 — Veritabanı Şeması
 **Karar:** Soft delete pattern kullanılacak, kayıtlar fiziksel olarak silinmeyecek
 **Gerekçe:** Görev geçmişi ve audit trail ihtiyacı, silinen verilerin raporlarda görünmemesi gerekiyor
 **Alternatifler:** Hard delete (audit trail kaybı riski), ayrı archive tablosu (karmaşıklık)
 **Etkilenen dosyalar:** `src/backend/Data/Entities/`, tüm repository sınıfları
 
-### 2025-01-17 — Repository Pattern
+## 2025-01-17 — Repository Pattern
 **Karar:** Generic repository pattern uygulanacak
 **Gerekçe:** Kod tekrarını azaltmak, test edilebilirliği artırmak
 **Alternatifler:** DbContext doğrudan kullanım (test zorluğu), CQRS (overkill bu aşamada)
 **Etkilenen dosyalar:** `src/backend/Data/Repositories/`
 
-### 2025-01-20 — JWT Yapılandırması
+## 2025-01-20 — JWT Yapılandırması
 **Karar:** Access token 1 saat, refresh token 7 gün
 **Gerekçe:** Güvenlik ve kullanıcı deneyimi dengesi
 **Alternatifler:** 15 dk access token (çok kısa, UX kötü), 24 saat (güvenlik riski)
@@ -946,6 +964,39 @@ Entity Framework Core ile veritabanı tasarımı, migration yönetimi ve sorgu o
 - `.context/rules/testing.md` — repository test kuralları
 ```
 
+**Örnek — skills/ui-components/skill.md:**
+
+```markdown
+# UI Components
+
+## Kapsam
+React + TypeScript ile yeniden kullanılabilir UI bileşenlerinin tasarımı ve geliştirilmesi.
+
+## Yaklaşım
+- Bileşenler tek sorumluluk prensibine göre tasarlanır
+- Props arayüzü (interface) önce tanımlanır, implementasyon sonra yazılır
+- Stil için Tailwind utility class'ları kullanılır, inline style yasak
+- Bileşenler mümkün olduğunca stateless tutulur, state yönetimi üst bileşene taşınır
+
+## Adımlar
+1. Bileşenin props interface'ini tanımla
+2. Bileşen iskeletini oluştur (functional component)
+3. Temel render mantığını yaz
+4. Stil uygula (Tailwind)
+5. Edge case'leri ve hata durumlarını ele al
+6. Jest ile bileşen testini yaz
+
+## Dikkat Edilecekler
+- any tipi kullanılmaz, tüm props tiplendirilir
+- dangerouslySetInnerHTML kullanılmaz
+- Erişilebilirlik (a11y) için aria attribute'ları eklenir
+- Bileşen 150 satırı aşıyorsa daha küçük bileşenlere bölünmeli
+
+## Referanslar
+- `.context/rules/code-style.md` — bileşen yazım standartları
+- `.context/rules/testing.md` — bileşen test kuralları
+```
+
 ---
 
 ## 5. Kullanım Rehberi
@@ -957,19 +1008,25 @@ Entity Framework Core ile veritabanı tasarımı, migration yönetimi ve sorgu o
 3. `AGENTS.md` içindeki `[yer tutucu]` alanları doldur
 4. İhtiyaç duyulmayan modülleri (`rules/`, `skills/` vb.) boş bırak veya sil
 5. Zorunlu hafıza dosyalarını (`project-state.md`, `progress.md`, `decisions.md`) doldur
+6. Çoklu-ajan (multi-agent) kullanılacaksa projenin `.gitignore` dosyasına `.context/memory/.lock` kuralını ekle
 
 ### Tek agent kullanımı
 
 `agents/` dizininde tek bir dosya yeterlidir. `sessions/` dizini opsiyoneldir ancak uzun soluklu projelerde oturum sürekliliği için önerilir.
 
-Minimal `AGENTS.md` yapısı (tek agent için):
-- `Agent'lar` tablosu kaldırılabilir
+Minimal `AGENTS.md` ve hafıza yapısı (tek agent için):
+- `AGENTS.md` içindeki `Agent'lar` tablosu kaldırılabilir
 - `Oturum Başlangıcı` listesi 2 adıma indirilebilir (`project-state.md` ve `progress.md`)
-- `agents/` dizini de opsiyoneldir; kurallar doğrudan `rules/` ile yönetilebilir
+- `agents/` dizini opsiyoneldir; kurallar doğrudan `rules/` ile yönetilebilir
+- **Handoff tablosu ve `.lock` dosya kuralı kullanılmaz**, göz ardı edilir veya belgelerden silinebilir
 
 ### Multi-agent kullanımı
 
-Her agent için `agents/[agent_name].md` ve `sessions/[agent_name]_session.md` dosyaları oluşturulur. `project-state.md` içindeki "Aktif Çalışmalar" tablosu agent'lar arası koordinasyonu sağlar. Her agent yalnızca kendi tanım dosyasında belirtilen dizinlere yazar.
+Gelişmiş projelerde her agent için `agents/[agent_name].md` ve `sessions/[agent_name]_session.md` dosyaları oluşturulur. Çoklu ajan yönetiminde şu dört kural uygulanır:
+1. **İzolasyon:** Her agent yalnızca kendi tanım dosyasında belirtilen dizinlere (frontend, backend vb.) kod yazar.
+2. **Görünürlük:** `project-state.md` içindeki **"Aktif Çalışmalar"** tablosu kimin hangi dizinde çalıştığını göstererek görev çakışmasını (aynı işi iki ajanın yapmasını) önler.
+3. **Handoff (İş Devri):** Bir ajan başka bir ajana bağımlı işini bitirdiğinde, aynı dosyadaki **"Bekleyen Handoff'lar"** tablosuna not bırakır.
+4. **Kilit (Lock) Kuralı:** Ajanların `.context/memory/` içindeki ortak dosyaları (progress, project-state) bozmaması için `.lock` okuma/yazma kuralına uyması zorunludur.
 
 ### Görev akışı
 
